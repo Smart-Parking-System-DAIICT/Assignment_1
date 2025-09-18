@@ -9,10 +9,10 @@
 #include <deque>
 #include <algorithm>
 using namespace std;
-using std::chrono::system_clock;
 using namespace std::this_thread;
-char direction='r';
+using namespace std::chrono;
 
+char direction='r';
 
 void input_handler(){
     // change terminal settings
@@ -26,16 +26,13 @@ void input_handler(){
     while (true) {
         char input = getchar();
         if (keymap.find(input) != keymap.end()) {
-            // This now correctly modifies the single, shared 'direction' variable
             direction = keymap[input];
-        }else if (input == 'q'){
+        } else if (input == 'q'){
             exit(0);
         }
-        // You could add an exit condition here, e.g., if (input == 'q') break;
     }
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 }
-
 
 void render_game(int size, deque<pair<int, int>> &snake, pair<int, int> food){
     for(size_t i=0;i<size;i++){
@@ -47,28 +44,24 @@ void render_game(int size, deque<pair<int, int>> &snake, pair<int, int> food){
             }else{
                 cout << "⬜";
             }
+        }
+        cout << endl;
     }
-    cout << endl;
-}
 }
 
 pair<int,int> get_next_head(pair<int,int> current, char direction){
     pair<int, int> next; 
     if(direction =='r'){
         next = make_pair(current.first,(current.second+1) % 10);
-    }else if (direction=='l')
-    {
+    }else if (direction=='l'){
         next = make_pair(current.first, current.second==0?9:current.second-1);
     }else if(direction =='d'){
-            next = make_pair((current.first+1)%10,current.second);
-        }else if (direction=='u'){
-            next = make_pair(current.first==0?9:current.first-1, current.second);
-        }
+        next = make_pair((current.first+1)%10,current.second);
+    }else if (direction=='u'){
+        next = make_pair(current.first==0?9:current.first-1, current.second);
+    }
     return next;
-    
 }
-
-
 
 void game_play(){
     system("clear");
@@ -76,26 +69,34 @@ void game_play(){
     snake.push_back(make_pair(0,0));
 
     pair<int, int> food = make_pair(rand() % 10, rand() % 10);
+
+    int foods_eaten = 0;               
+    int delay_ms = 500;                
+    const int min_delay = 100;     
+
     for(pair<int, int> head=make_pair(0,1);; head = get_next_head(head, direction)){
-        // send the cursor to the top
         cout << "\033[H";
-        // check self collision
         if (find(snake.begin(), snake.end(), head) != snake.end()) {
             system("clear");
             cout << "Game Over" << endl;
             exit(0);
         }else if (head.first == food.first && head.second == food.second) {
-            // grow snake
             food = make_pair(rand() % 10, rand() % 10);
-            snake.push_back(head);            
+            snake.push_back(head);  
+            
+            foods_eaten++;
+            if (foods_eaten % 10 == 0 && delay_ms > min_delay) {
+                delay_ms -= 50; 
+            }
+
         }else{
-            // move snake
             snake.push_back(head);
             snake.pop_front();
         }
         render_game(10, snake, food);
-        cout << "length of snake: " << snake.size() << endl;
+        cout << "Length of snake: " << snake.size() 
+             << "    Speed: " << delay_ms << "ms" << endl;
     
-        sleep_for(500ms);
+        sleep_for(milliseconds(delay_ms));
     }
 }
