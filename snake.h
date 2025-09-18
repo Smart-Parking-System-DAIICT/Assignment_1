@@ -16,12 +16,10 @@ char direction = 'r';
 
 // input handler
 void input_handler() {
-    // change terminal settings
     struct termios oldt, newt;
     tcgetattr(STDIN_FILENO, &oldt);
     newt = oldt;
-    // turn off canonical mode and echo
-    newt.c_lflag &= ~(ICANON | ECHO);
+    newt.c_lflag &= ~(ICANON | ECHO); // disable canonical + echo
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
     map<char, char> keymap = {{'d', 'r'}, {'a', 'l'}, {'w', 'u'}, {'s', 'd'}, {'q', 'q'}};
@@ -83,6 +81,7 @@ void game_play() {
     int foods_eaten = 0;
     int delay_ms = 500;
     const int min_delay = 100;
+    int score = 0;
 
     for (pair<int, int> head = make_pair(0, 1);; head = get_next_head(head, direction)) {
         cout << "\033[H";
@@ -90,12 +89,15 @@ void game_play() {
         if (find(snake.begin(), snake.end(), head) != snake.end()) {
             system("clear");
             cout << "Game Over" << endl;
+            cout << "Final Score: " << score << endl;
             exit(0);
         }
         else if (head.first == food.first && head.second == food.second) {
             snake.push_back(head);
             food = generate_food(10, snake);
             foods_eaten++;
+            score += 10;
+
             if (foods_eaten % 10 == 0 && delay_ms > min_delay) {
                 delay_ms -= 50;
             }
@@ -107,6 +109,7 @@ void game_play() {
 
         render_game(10, snake, food);
         cout << "Length of snake: " << snake.size()
+             << "    Score: " << score
              << "    Speed: " << delay_ms << "ms" << endl;
 
         sleep_for(milliseconds(delay_ms));
