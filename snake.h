@@ -13,7 +13,8 @@ using namespace std;
 using namespace std::this_thread;
 
 char direction = 'r';
-atomic<bool> paused(false);  // shared pause state
+atomic<bool> paused(false);
+vector<int> high_scores;
 
 void input_handler() {
     struct termios oldt, newt;
@@ -34,12 +35,26 @@ void input_handler() {
             if (direction == 'q') exit(0);
         }
         else if (input == ' ') {  
-            // Space toggles pause
-            paused = !paused;
+            paused = !paused;  // toggle pause
         }
     }
 
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+}
+
+void update_high_scores(int score) {
+    high_scores.push_back(score);
+    sort(high_scores.rbegin(), high_scores.rend());
+    if (high_scores.size() > 10) {
+        high_scores.resize(10);
+    }
+}
+
+void show_high_scores() {
+    cout << "\n Top 10 High Scores" << endl;
+    for (size_t i = 0; i < high_scores.size(); i++) {
+        cout << i + 1 << ". " << high_scores[i] << endl;
+    }
 }
 
 void render_game(int size, deque<pair<int, int>> &snake, pair<int, int> food, pair<int, int> poison) {
@@ -81,6 +96,17 @@ pair<int,int> generate_item(int size, deque<pair<int,int>> &snake, pair<int,int>
     return pos;
 }
 
+void game_over(string reason, int score) {
+    system("clear");
+    cout << "Game Over: " << reason << endl;
+    cout << "Final Score: " << score << endl;
+
+    update_high_scores(score);
+    show_high_scores();
+
+    exit(0);
+}
+
 void game_play() {
     system("clear");
     deque<pair<int, int>> snake;
@@ -105,17 +131,11 @@ void game_play() {
         }
 
         if (find(snake.begin(), snake.end(), head) != snake.end()) {
-            system("clear");
-            cout << "Game Over (hit yourself)" << endl;
-            cout << "Final Score: " << score << endl;
-            exit(0);
+            game_over("Game Over (You hit yourself)", score);
         }
 
         if (head == poison) {
-            system("clear");
-            cout << "Game Over (ate poison)" << endl;
-            cout << "Final Score: " << score << endl;
-            exit(0);
+            game_over("Game Over (Ate poison)", score);
         }
 
         if (head == food) {
